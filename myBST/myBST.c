@@ -4,148 +4,113 @@
 #include <stdbool.h>
 #include "myBST.h">
 
-void INIT(BST *T) {
-    *T = NULL;
+BST insert(BST root, Product newProduct){
+    if(root != NULL){
+        if(strcmp(newProduct.prodName, root->item.prodName) < 0){
+            root->left = insert(root->left, newProduct);
+        }else if(strcmp(newProduct.prodName, root->item.prodName) > 0){
+            root->right = insert(root->right, newProduct);
+        }
+        return root;
+    }else{
+        return createNode(newProduct);
+    }
 }
 
-void INSERT(BST *T, Product elem) {
-    BST trav = *T, temp;
-    while (trav != NULL && strcmp(trav->item.prodName, elem.prodName) != 0) {
-        trav = (strcmp(trav->item.prodName, elem.prodName) < 0) ? trav->RC : trav->LC;
+BST createNode(Product newProduct){
+    BST temp = malloc(sizeof(struct node));
+    if(temp != NULL){
+        temp->item = newProduct;
+        temp->left = temp->right = NULL;
     }
-    if (trav == NULL) {
-        temp = (BST)malloc(sizeof(struct node));
-        if (temp != NULL) {
-            temp->item = elem;
-            temp->LC = temp->RC = NULL;
-            *T = temp;
+    return temp;
+}
+
+BST findSuccessor(BST root){
+    BST currentRoot = root;
+
+    while(currentRoot && currentRoot->left != NULL){
+        currentRoot = currentRoot->left;
+    }
+    return currentRoot;
+}
+
+BST deleteNode(BST root, Product delProduct){
+    BST temp = root;
+
+    if(root != NULL){
+        if(strcmp(delProduct.prodName, root->item.prodName) < 0){
+            root->left = deleteNode(root->left, delProduct);
+        }else if(strcmp(delProduct.prodName, root->item.prodName) > 0){
+            root->right = deleteNode(root->right, delProduct);
+        }else{
+            if(root->left == NULL && root->right == NULL){
+                free(temp);
+                root = NULL;
+            }else if(root->left == NULL){
+                temp = root->right;
+                free(temp);
+            }else if(root->right == NULL){
+                temp = root->left;
+                free(temp);
+            }else{
+                temp = findSuccessor(root->right);
+                root->item = temp->item;
+                root->right = deleteNode(root->right, temp->item);
+
+            }
+        }
+        return root;
+    }
+    return root;
+}
+
+void inOrder(BST root){
+    if(root != NULL){
+        inOrder(root->left);
+        printf("%-20s %02d-%02d-%d  P%.2f  %d\n", root->item.prodName, root->item.expDate.day, root->item.expDate.month, root->item.expDate.year, root->item.prodPrice, root->item.prodQty);
+        inOrder(root->right);
+    }
+}
+
+void preOrder(BST root){
+    if(root != NULL){
+        printf("%-20s %02d-%02d-%d  P%.2f  %d\n", root->item.prodName, root->item.expDate.day, root->item.expDate.month, root->item.expDate.year, root->item.prodPrice, root->item.prodQty);
+        inOrder(root->left);
+        inOrder(root->right);
+    }
+}
+
+void postOrder(BST root){
+    if(root != NULL){
+        inOrder(root->left);
+        inOrder(root->right);
+        printf("%-20s %02d-%02d-%d  P%.2f  %d\n", root->item.prodName, root->item.expDate.day, root->item.expDate.month, root->item.expDate.year, root->item.prodPrice, root->item.prodQty);
+        
+    }
+}
+
+void bfs(BST root){
+    if(root != NULL){
+        BST queue[100];
+
+        int front = 0, rear = 0;
+        queue[rear++] = root;
+
+        while(front < rear){
+            BST current = queue[front++];
+
+            printf("%-20s %02d-%02d-%d  P%.2f  %-20d\n", current->item.prodName, current->item.expDate, current->item.prodPrice, current->item.prodQty);
+
+            //enqueue left child
+            if(current->left != NULL){
+                queue[rear++] = current->left;
+            }
+
+            //enqueue right child
+            if(current->right != NULL){
+                queue[rear++] = current->right;
+            }
         }
     }
-}
-
-void PREORDER(BST T) {
-    if (T != NULL) {
-        printf("%-20s ", T->item.prodName);
-        PREORDER(T->LC);
-        PREORDER(T->RC);
-    }
-}
-
-void INORDER(BST T) {
-    if (T != NULL) {
-        INORDER(T->LC);
-        printf("%-20s ", T->item.prodName);
-        INORDER(T->RC);
-    }
-}
-
-void POSTORDER(BST T) {
-    if (T != NULL) {
-        POSTORDER(T->LC);
-        POSTORDER(T->RC);
-        printf("%-20s ", T->item.prodName);
-    }
-}
-
-void BFS(BST T) {
-    Queue q;
-    q.front = q.rear = NULL;
-
-    if (T != NULL) {
-        enqueue(&q, T);
-    }
-
-    while (!isQueueEmpty(&q)) {
-        BST current = dequeue(&q);
-        printf("%-20s ", current->item.prodName);
-
-        if (current->LC != NULL) {
-            enqueue(&q, current->LC);
-        }
-        if (current->RC != NULL) {
-            enqueue(&q, current->RC);
-        }
-    }
-}
-
-// Queue functions for BFS
-void enqueue(Queue *q, BST treeNode) {
-    QueueNode *newNode = (QueueNode *)malloc(sizeof(QueueNode));
-    if (newNode == NULL) {
-        perror("Memory allocation failed");
-        exit(EXIT_FAILURE);
-    }
-    newNode->treeNode = treeNode;
-    newNode->next = NULL;
-
-    if (q->rear == NULL) {
-        q->front = q->rear = newNode;
-    } else {
-        q->rear->next = newNode;
-        q->rear = newNode;
-    }
-}
-
-BST dequeue(Queue *q) {
-    if (isQueueEmpty(q)) {
-        fprintf(stderr, "Queue is empty\n");
-        exit(EXIT_FAILURE);
-    }
-
-    QueueNode *temp = q->front;
-    BST treeNode = temp->treeNode;
-
-    q->front = q->front->next;
-    if (q->front == NULL) {
-        q->rear = NULL;
-    }
-
-    free(temp);
-    return treeNode;
-}
-
-int isQueueEmpty(Queue *q) {
-    return (q->front == NULL);
-}
-
-BST DELETE(BST T, char *prodName) {
-    if (T == NULL) {
-        return NULL;
-    }
-
-    // Search for the node to delete
-    if (strcmp(T->item.prodName, prodName) < 0) {
-        T->RC = DELETE(T->RC, prodName);
-    } else if (strcmp(T->item.prodName, prodName) > 0) {
-        T->LC = DELETE(T->LC, prodName);
-    } else {
-        // Node to be deleted found
-        BST temp;
-
-        // Case 1: No child or one child
-        if (T->LC == NULL) {
-            temp = T->RC;
-            free(T);
-            return temp;
-        } else if (T->RC == NULL) {
-            temp = T->LC;
-            free(T);
-            return temp;
-        }
-
-        // Case 2: Two children
-        // Find the minimum node in the right subtree (successor)
-        temp = T->RC;
-        while (temp->LC != NULL) {
-            temp = temp->LC;
-        }
-
-        // Copy the successor's data to this node
-        T->item = temp->item;
-
-        // Delete the successor node
-        T->RC = DELETE(T->RC, temp->item.prodName);
-    }
-
-    return T;
 }
